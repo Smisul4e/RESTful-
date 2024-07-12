@@ -18,11 +18,29 @@ def find_book_by_id(book_id):
     return None
 
 
+def validate_book_data(data):
+    """Валидация на данните за книгата"""
+    if "title" not in data or "author" not in data:
+        return False
+    return True
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({"error": "Not Found"}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed_error(error):
+    return jsonify({"error": "Method Not Allowed"}), 405
+
+
 @app.route('/api/books', methods=['GET', 'POST'])
 def handle_books():
     if request.method == 'POST':
-        # Получаване на данните за новата книга от клиента
         new_book = request.get_json()
+        if not validate_book_data(new_book):
+            return jsonify({"error": "Invalid book data"}), 400
 
         # Генериране на ново ID за книгата
         new_id = max(book['id'] for book in books) + 1
@@ -49,6 +67,9 @@ def handle_book(id):
 
     # Обновяване на книгата с новите данни
     new_data = request.get_json()
+    if not validate_book_data(new_data):
+        return jsonify({"error": "Invalid book data"}), 400
+
     book.update(new_data)
 
     # Връщане на обновената книга
