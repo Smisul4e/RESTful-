@@ -10,8 +10,8 @@ books = [
 
 
 def find_book_by_id(book_id):
-    """ Find the book with the id `book_id`.
-    If there is no book with this id, return None. """
+    """Намира книга с даденото `book_id`.
+    Ако няма книга с това id, връща None."""
     for book in books:
         if book['id'] == book_id:
             return book
@@ -52,6 +52,22 @@ def handle_book(id):
     book.update(new_data)
 
     # Връщане на обновената книга
+    return jsonify(book)
+
+
+@app.route('/api/books/<int:id>', methods=['DELETE'])
+def delete_book(id):
+    # Намиране на книгата с даденото ID
+    book = find_book_by_id(id)
+
+    # Ако книгата не е намерена, връщане на грешка 404
+    if book is None:
+        return '', 404
+
+    # Премахване на книгата от списъка
+    books.remove(book)
+
+    # Връщане на изтритата книга
     return jsonify(book)
 
 
