@@ -1,9 +1,12 @@
+import logging
 from flask import Flask, jsonify, request
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-limiter = Limiter(app=app, key_func=get_remote_address)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 # Example list of books
 books = [
@@ -23,16 +26,17 @@ def find_book_by_id(book_id):
 
 # Route to handle GET and POST requests for /api/books
 @app.route('/api/books', methods=['GET', 'POST'])
-@limiter.limit("10/minute")  # Limit to 10 requests per minute
 def handle_books():
     if request.method == 'POST':
         new_book = request.get_json()
         if not validate_book_data(new_book):
+            app.logger.warning('Invalid book data received')
             return jsonify({"error": "Invalid book data"}), 400
 
         new_id = max(book['id'] for book in books) + 1 if books else 1
         new_book['id'] = new_id
         books.append(new_book)
+        app.logger.info(f'Added new book: {new_book}')
         return jsonify(new_book), 201
     else:
         # Handle pagination
@@ -41,30 +45,37 @@ def handle_books():
         start_index = (page - 1) * limit
         end_index = start_index + limit
         paginated_books = books[start_index:end_index]
+
+        app.logger.info(f'Returning books from index {start_index} to {end_index}')
         return jsonify(paginated_books)
 
 
 # Route to handle GET, PUT, and DELETE requests for /api/books/<id>
 @app.route('/api/books/<int:id>', methods=['GET', 'PUT', 'DELETE'])
-@limiter.limit("10/minute")  # Limit to 10 requests per minute
 def handle_book(id):
     book = find_book_by_id(id)
     if request.method == 'GET':
         if book is None:
+            app.logger.warning(f'Book with ID {id} not found')
             return '', 404
+        app.logger.info(f'Retrieved book: {book}')
         return jsonify(book)
 
     if request.method == 'PUT':
         if book is None:
+            app.logger.warning(f'Book with ID {id} not found')
             return '', 404
         new_data = request.get_json()
         book.update(new_data)
+        app.logger.info(f'Updated book with ID {id}: {book}')
         return jsonify(book)
 
     if request.method == 'DELETE':
         if book is None:
+            app.logger.warning(f'Book with ID {id} not found')
             return '', 404
         books.remove(book)
+        app.logger.info(f'Deleted book with ID {id}')
         return jsonify(book)
 
 
@@ -76,11 +87,13 @@ def validate_book_data(data):
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
+    app.logger.error('404 Not Found error')
     return jsonify({"error": "Not Found"}), 404
 
 
 @app.errorhandler(405)
 def method_not_allowed_error(error):
+    app.logger.error('405 Method Not Allowed error')
     return jsonify({"error": "Method Not Allowed"}), 405
 
 
