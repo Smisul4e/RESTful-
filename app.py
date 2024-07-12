@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-# Нашият списък с книги
+# Our list of books
 books = [
     {"id": 1, "title": "The Great Gatsby", "author": "F. Scott Fitzgerald"},
     {"id": 2, "title": "1984", "author": "George Orwell"}
@@ -10,8 +10,7 @@ books = [
 
 
 def find_book_by_id(book_id):
-    """Намира книга с даденото `book_id`.
-    Ако няма книга с това id, връща None."""
+    """Find the book with the given `book_id`. If no such book exists, return None."""
     for book in books:
         if book['id'] == book_id:
             return book
@@ -19,7 +18,7 @@ def find_book_by_id(book_id):
 
 
 def validate_book_data(data):
-    """Валидация на данните за книгата"""
+    """Validate book data."""
     if "title" not in data or "author" not in data:
         return False
     return True
@@ -42,53 +41,56 @@ def handle_books():
         if not validate_book_data(new_book):
             return jsonify({"error": "Invalid book data"}), 400
 
-        # Генериране на ново ID за книгата
+        # Generate new ID for the book
         new_id = max(book['id'] for book in books) + 1
         new_book['id'] = new_id
 
-        # Добавяне на новата книга към нашия списък
+        # Add new book to the list
         books.append(new_book)
 
-        # Връщане на данните за новата книга на клиента
+        # Return the new book data to the client
         return jsonify(new_book), 201
     else:
-        # Обработка на GET заявката
+        author = request.args.get('author')
+        if author:
+            filtered_books = [book for book in books if book.get('author') == author]
+            return jsonify(filtered_books)
         return jsonify(books)
 
 
 @app.route('/api/books/<int:id>', methods=['PUT'])
 def handle_book(id):
-    # Намиране на книгата с даденото ID
+    # Find the book with the given ID
     book = find_book_by_id(id)
 
-    # Ако книгата не е намерена, връщане на грешка 404
+    # If the book wasn't found, return a 404 error
     if book is None:
         return '', 404
 
-    # Обновяване на книгата с новите данни
+    # Update the book with the new data
     new_data = request.get_json()
     if not validate_book_data(new_data):
         return jsonify({"error": "Invalid book data"}), 400
 
     book.update(new_data)
 
-    # Връщане на обновената книга
+    # Return the updated book
     return jsonify(book)
 
 
 @app.route('/api/books/<int:id>', methods=['DELETE'])
 def delete_book(id):
-    # Намиране на книгата с даденото ID
+    # Find the book with the given ID
     book = find_book_by_id(id)
 
-    # Ако книгата не е намерена, връщане на грешка 404
+    # If the book wasn't found, return a 404 error
     if book is None:
         return '', 404
 
-    # Премахване на книгата от списъка
+    # Remove the book from the list
     books.remove(book)
 
-    # Връщане на изтритата книга
+    # Return the deleted book
     return jsonify(book)
 
 
